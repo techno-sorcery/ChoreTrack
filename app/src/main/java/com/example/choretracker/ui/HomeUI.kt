@@ -1,0 +1,331 @@
+package com.example.choretracker.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.example.choretracker.Chore
+import com.example.choretracker.ChoreType
+import com.example.choretracker.Person
+import com.example.choretracker.R
+import kotlin.collections.forEach
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.IconButton
+
+
+@Composable
+fun HomeScreen(
+    model: CTViewModel
+) {
+    var showAddPersonDialog by remember { mutableStateOf(false) }
+    var showRemovePersonDialog by rememberSaveable { mutableStateOf(false) }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            ChoreTrackerAppbar(
+                text = "Household"
+            )
+        },
+        bottomBar = {
+            ChoreTrackerBottomBar(model)
+        },
+        floatingActionButton = {
+            HomeActionButton(
+                onClickAdd = {
+                    showAddPersonDialog = true
+                }
+            )
+        }
+
+    ) { innerPadding ->
+        HomeCards(
+            model = model,
+            modifier = Modifier
+                .padding(
+                    innerPadding
+                )
+        )
+    }
+
+    if (showAddPersonDialog) {
+        AddPersonDialog(
+            onDismiss = { showAddPersonDialog = false },
+            onConfirm = { name ->
+                model.personList.add(Person(name = name))
+                showAddPersonDialog = false
+            }
+        )
+    }
+
+    if (showRemovePersonDialog) {
+        RemovePersonDialog(
+            people = model.personList,
+            onDismiss = { showRemovePersonDialog = false },
+            onRemove = { person ->
+                model.personList.remove(person)
+                showRemovePersonDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun HomeCards(
+    modifier: Modifier = Modifier,
+    model: CTViewModel
+) {
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            AssignedChoresCard(
+                model = model,
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+        }
+
+        items(
+            model.personList
+        ) { person ->
+            PersonCard(
+                person = person,
+                allChores = model.choreList,
+                onDeletePerson = { model.personList.remove(it) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+    }
+}
+
+@Composable
+fun PersonCard(
+    person: Person,
+    allChores: List<Chore>,
+    onDeletePerson: (Person) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val assignedChores = allChores.filter { chore ->
+        chore.assigned.contains(person)
+    }
+
+    Card(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = person.name,
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_remove_24),
+                        contentDescription = "Delete ${person.name}"
+                    )
+                }
+            }
+
+            if (assignedChores.isEmpty()) {
+                Text(
+                    text = "No assigned chores",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                assignedChores.forEach { chore ->
+                    Text(
+                        text = "• ${chore.title.ifBlank { "Untitled chore" }} (${chore.type})",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete person?") },
+            text = { Text("Remove ${person.name} from the household?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeletePerson(person)
+                        showDeleteDialog = false
+                    }
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+@Composable
+fun RemovePersonDialog(
+    people: List<Person>,
+    onDismiss: () -> Unit,
+    onRemove: (Person) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Remove Person") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                people.forEach { person ->
+                    TextButton(
+                        onClick = { onRemove(person) }
+                    ) {
+                        Text(person.name)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun AddPersonDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Add New Person")
+        },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onConfirm(name.trim())
+                    }
+                }
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun AssignedChoresCard(
+    model: CTViewModel,
+    modifier: Modifier = Modifier
+) {
+    // Counts of incomplete chores by type
+    val oneTimeTotal = model.choreList.count {
+        !it.completed && it.type == ChoreType.ONE_TIME
+    }
+    val weeklyTotal = model.choreList.count {
+        !it.completed && it.type == ChoreType.WEEKLY
+    }
+    val monthlyTotal = model.choreList.count {
+        !it.completed && it.type == ChoreType.MONTHLY
+    }
+
+    Card(
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Assigned Chores",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = "One-Time: $oneTimeTotal",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = "This Week: $weeklyTotal",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = "This Month: $monthlyTotal",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+}
+
+@Composable
+fun HomeActionButton(
+    onClickAdd: () -> Unit
+) {
+    FloatingActionButton(
+        onClick = onClickAdd
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.outline_add_24),
+            contentDescription = "Add Person"
+        )
+    }
+}
