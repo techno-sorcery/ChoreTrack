@@ -35,6 +35,10 @@ import com.example.choretracker.R
 import kotlin.collections.forEach
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 
 @Composable
@@ -43,6 +47,8 @@ fun HomeScreen(
 ) {
     var showAddPersonDialog by remember { mutableStateOf(false) }
     var showRemovePersonDialog by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -60,7 +66,10 @@ fun HomeScreen(
                     showAddPersonDialog = true
                 }
             )
-        }
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
 
     ) { innerPadding ->
         HomeCards(
@@ -75,9 +84,21 @@ fun HomeScreen(
     if (showAddPersonDialog) {
         AddPersonDialog(
             onDismiss = { showAddPersonDialog = false },
-            onConfirm = { name ->
-                model.personList.add(Person(name = name))
-                showAddPersonDialog = false
+            onConfirm = { name, emoji ->
+
+                val success = model.addPerson(name, emoji)
+
+                if (success) {
+                    showAddPersonDialog = false
+                } else {
+
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Person already exists"
+                        )
+                    }
+
+                }
             }
         )
     }
@@ -87,7 +108,7 @@ fun HomeScreen(
             people = model.personList,
             onDismiss = { showRemovePersonDialog = false },
             onRemove = { person ->
-                model.personList.remove(person)
+                model.removePerson(person)
                 showRemovePersonDialog = false
             }
         )
@@ -119,7 +140,7 @@ fun HomeCards(
             PersonCard(
                 person = person,
                 allChores = model.choreList,
-                onDeletePerson = { model.personList.remove(it) },
+                onDeletePerson = { model.removePerson(it) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -137,7 +158,7 @@ fun PersonCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val assignedChores = allChores.filter { chore ->
-        chore.assigned.contains(person)
+        chore.assigned.any { it.id == person.id }
     }
 
     Card(modifier = modifier) {
@@ -153,7 +174,7 @@ fun PersonCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = person.name,
+                    text = "${person.emoji} ${person.name}",
                     style = MaterialTheme.typography.titleLarge
                 )
 
@@ -173,7 +194,7 @@ fun PersonCard(
             } else {
                 assignedChores.forEach { chore ->
                     Text(
-                        text = "• ${chore.title.ifBlank { "Untitled chore" }} (${chore.type})",
+                        text = "• ${chore.title.ifBlank { "Untitled chore" }} (${chore.type.displayName})",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -235,9 +256,10 @@ fun RemovePersonDialog(
 @Composable
 fun AddPersonDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    var emoji by remember { mutableStateOf("🙂") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -245,20 +267,43 @@ fun AddPersonDialog(
             Text("Add New Person")
         },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Name") },
-                singleLine = true
-            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+                Text("Choose Emoji")
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+
+                ) {
+                    listOf("🙂","😎","🔥","💪","👑","🐐","🎯","⚡").forEach {
+
+                        TextButton(
+                            onClick = { emoji = it }
+                        ) {
+                            Text(it)
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true
+                )
+            }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onConfirm(name.trim())
+                        onConfirm(name.trim(), emoji)
                     }
-                }
+                },
+                enabled = name.isNotBlank()
             ) {
                 Text("Add")
             }

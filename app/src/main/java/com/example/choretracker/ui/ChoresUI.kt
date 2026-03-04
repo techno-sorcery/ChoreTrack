@@ -4,11 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -125,6 +123,7 @@ fun ChoreScreen(
             ChoreCards(
                 modifier = Modifier.fillMaxSize(),
                 chores = filteredChores,
+                model = model
             )
         }
     }
@@ -133,8 +132,14 @@ fun ChoreScreen(
         AddChoreDialog(
             people = model.personList,
             onDismiss = { showAddChoreDialog = false },
-            onConfirm = { chore ->
-                model.choreList.add(chore)
+            onConfirm = { title, description, type, assigned, tags ->
+                model.addChore(
+                    title,
+                    description,
+                    type,
+                    tags,
+                    assigned
+                )
                 showAddChoreDialog = false
             }
         )
@@ -144,7 +149,8 @@ fun ChoreScreen(
 @Composable
 fun ChoreCards(
     modifier: Modifier = Modifier,
-    chores: List<Chore>
+    chores: List<Chore>,
+    model: CTViewModel
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -157,6 +163,7 @@ fun ChoreCards(
         ) { chore ->
             ChoreItemCard(
                 chore = chore,
+                onToggle = { model.toggleChore(it) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -168,10 +175,11 @@ fun ChoreCards(
 fun AddChoreDialog(
     people: List<Person>,
     onDismiss: () -> Unit,
-    onConfirm: (Chore) -> Unit
+    onConfirm: (String, String?, ChoreType, List<Person>, List<String>) -> Unit
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
+    var tagsInput by rememberSaveable { mutableStateOf("") }
 
     var typeExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedType by rememberSaveable { mutableStateOf(ChoreType.ONE_TIME) }
@@ -199,6 +207,13 @@ fun AddChoreDialog(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = tagsInput,
+                    onValueChange = { tagsInput = it },
+                    label = { Text("Tags (comma separated)") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -265,7 +280,9 @@ fun AddChoreDialog(
                                     checked = checked,
                                     onCheckedChange = { isChecked ->
                                         if (isChecked) {
-                                            if (index !in selectedIndexes) selectedIndexes.add(index)
+                                            if (index !in selectedIndexes) {
+                                                selectedIndexes.add(index)
+                                            }
                                         } else {
                                             selectedIndexes.remove(index)
                                         }
@@ -285,14 +302,18 @@ fun AddChoreDialog(
                             .sorted()
                             .mapNotNull { idx -> people.getOrNull(idx) }
 
+                        val tags = tagsInput
+                            .split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+
                         onConfirm(
-                            Chore(
-                                title = title.trim(),
-                                description = description.takeIf { it.isNotBlank() }?.trim(),
-                                type = selectedType,
-                                assigned = assignedPeople
+                                title.trim(),
+                                description.takeIf { it.isNotBlank() }?.trim(),
+                                selectedType,
+                                assignedPeople,
+                                tags
                             )
-                        )
                     }
                 }
             ) { Text("Add") }
@@ -306,6 +327,7 @@ fun AddChoreDialog(
 @Composable
 fun ChoreItemCard(
     chore: Chore,
+    onToggle: (Chore) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(modifier = modifier) {
@@ -337,7 +359,7 @@ fun ChoreItemCard(
                     }
 
                     Text(
-                        text = "Type: ${chore.type}",
+                        text = "Type: ${chore.type.displayName}",
                         style = MaterialTheme.typography.bodySmall
                     )
 
@@ -368,8 +390,7 @@ fun ChoreItemCard(
 
                 Checkbox(
                     checked = chore.completed,
-                    onCheckedChange = { isChecked ->
-                        chore.completed = isChecked
+                    onCheckedChange = { onToggle(chore)
                     }
                 )
             }

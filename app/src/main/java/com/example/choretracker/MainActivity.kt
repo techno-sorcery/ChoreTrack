@@ -18,6 +18,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.choretracker.ui.ChoreScreen
 
 import com.example.choretracker.ui.theme.ChoreTrackerTheme
+import com.example.choretracker.ui.StatsScreen
+
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,10 +41,28 @@ class MainActivity : ComponentActivity() {
 fun ChoreTrackerApp(
     model: CTViewModel = viewModel<CTViewModel>()
 ) {
-    if (model.screen == AppDestinations.HOME)
-        HomeScreen(model)
-    else if (model.screen == AppDestinations.CHORES)
-        ChoreScreen(model)
+    val context = LocalContext.current
+
+    // load saved data on startup
+    LaunchedEffect(Unit) {
+        model.loadData(context)
+    }
+    // save whenever lists change
+    LaunchedEffect(model.personList.size, model.choreList.size) {
+        model.saveData(context)
+    }
+
+    when (model.screen) {
+
+        AppDestinations.HOME ->
+            HomeScreen(model)
+
+        AppDestinations.CHORES ->
+            ChoreScreen(model)
+
+        AppDestinations.STATS ->
+            StatsScreen(model)
+    }
 }
 
 

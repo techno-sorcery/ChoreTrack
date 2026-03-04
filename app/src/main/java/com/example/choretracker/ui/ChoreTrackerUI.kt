@@ -89,7 +89,9 @@ fun ChoreTrackerBottomBar (
                 BottomBarClickable(
                     text = "Stats",
                     icon = R.drawable.outline_bar_chart_24,
-                    onClick = {}
+                    onClick = {
+                        model.screen = AppDestinations.STATS
+                    }
                 )
             }
         }
