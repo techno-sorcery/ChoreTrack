@@ -18,6 +18,7 @@ fun StatsScreen(
 
     val totalChores = model.choreList.size
     val completedChores = model.choreList.count { it.completed }
+    val totalCompletions = model.choreList.sumOf { it.completionCount }
 
     val completionRate =
         if (totalChores == 0) 0
@@ -27,22 +28,24 @@ fun StatsScreen(
         model.personList.map { person ->
 
             val completed =
-                model.choreList.count {
-                    it.completed && it.assigned.contains(person)
+                model.choreList
+                    .filter { chore ->
+                        chore.assigned.any { assigned -> assigned.id == person.id }
+                    }
+                    .sumOf { it.completionCount }
+
+            val assignedTotal =
+                model.choreList.count { chore ->
+                    chore.assigned.any { assigned -> assigned.id == person.id }
                 }
 
-            val total =
-                model.choreList.count {
-                    it.assigned.contains(person)
-                }
-
-            Triple(person, completed, total)
+            Triple(person, completed, assignedTotal)
         }
             .filter { it.second > 0 } // only people who completed chores
             .sortedByDescending { it.second }
 
     Scaffold(
-        topBar = { ChoreTrackerAppbar("Stats") },
+        topBar = { ChoreTrackerAppbar("Stats", model = model) },
         bottomBar = { ChoreTrackerBottomBar(model) }
     ) { padding ->
 
@@ -77,6 +80,11 @@ fun StatsScreen(
 
                         Text(
                             text = "Completed: $completedChores",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+
+                        Text(
+                            text = "Total Completion Events: $totalCompletions",
                             style = MaterialTheme.typography.bodyLarge
                         )
 
@@ -122,11 +130,11 @@ fun StatsScreen(
 
                 val person = entry.first
                 val completed = entry.second
-                val total = entry.third
+                val assignedTotal = entry.third
 
                 val progress =
-                    if (total == 0) 0f
-                    else completed.toFloat() / total
+                    if (assignedTotal == 0) 0f
+                    else (completed.toFloat() / assignedTotal).coerceAtMost(1f)
 
                 val animatedProgress =
                     animateFloatAsState(
@@ -182,7 +190,7 @@ fun StatsScreen(
                         }
 
                         Text(
-                            text = "Completed: $completed / $total",
+                            text = "Completions: $completed (Assigned chores: $assignedTotal)",
                             style = MaterialTheme.typography.bodyLarge
                         )
 

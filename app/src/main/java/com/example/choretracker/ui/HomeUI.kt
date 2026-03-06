@@ -54,7 +54,8 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             ChoreTrackerAppbar(
-                text = "Household"
+                text = "Household",
+                model = model
             )
         },
         bottomBar = {
@@ -158,7 +159,7 @@ fun PersonCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val assignedChores = allChores.filter { chore ->
-        chore.assigned.any { it.id == person.id }
+        !chore.completed && chore.assigned.any { it.id == person.id }
     }
 
     Card(modifier = modifier) {
@@ -321,14 +322,17 @@ fun AssignedChoresCard(
     model: CTViewModel,
     modifier: Modifier = Modifier
 ) {
-    // Counts of incomplete chores by type
-    val oneTimeTotal = model.choreList.count {
+    val openChores = model.choreList.count { !it.completed }
+    val oneTimeOpen = model.choreList.count {
         !it.completed && it.type == ChoreType.ONE_TIME
     }
-    val weeklyTotal = model.choreList.count {
+    val dailyOpen = model.choreList.count {
+        !it.completed && it.type == ChoreType.DAILY
+    }
+    val weeklyOpen = model.choreList.count {
         !it.completed && it.type == ChoreType.WEEKLY
     }
-    val monthlyTotal = model.choreList.count {
+    val monthlyOpen = model.choreList.count {
         !it.completed && it.type == ChoreType.MONTHLY
     }
 
@@ -346,15 +350,23 @@ fun AssignedChoresCard(
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = "One-Time: $oneTimeTotal",
+                text = "Open: $openChores",
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = "This Week: $weeklyTotal",
+                text = "One-Time: $oneTimeOpen",
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = "This Month: $monthlyTotal",
+                text = "Daily: $dailyOpen",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = "Weekly: $weeklyOpen",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = "Monthly: $monthlyOpen",
                 style = MaterialTheme.typography.bodyLarge
             )
         }

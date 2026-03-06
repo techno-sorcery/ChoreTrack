@@ -57,17 +57,40 @@ class CTViewModel : ViewModel() {
     }
 
     fun toggleChore(chore: Chore) {
-        when (chore.type) {
-            ChoreType.ONE_TIME -> {
-                if (!chore.completed) {
-                    chore.completed = true
-                    choreList.remove(chore)
-                }
-            }
-            ChoreType.WEEKLY,
-            ChoreType.MONTHLY -> chore.completed = !chore.completed
-            else -> chore.completed = !chore.completed
-        }
+        val index = choreList.indexOfFirst { it.id == chore.id }
+        if (index == -1) return
+
+        val existing = choreList[index]
+        if (existing.type == ChoreType.ONE_TIME && existing.completed) return
+
+        val isCompletingNow = !existing.completed
+        val nextCount =
+            if (isCompletingNow) existing.completionCount + 1
+            else existing.completionCount
+        val completedAt =
+            if (isCompletingNow) System.currentTimeMillis()
+            else existing.completedAtMillis
+
+        choreList[index] = existing.copy(
+            completed = !existing.completed,
+            completionCount = nextCount,
+            completedAtMillis = completedAt
+        )
+    }
+
+    fun updateChoreDetails(
+        choreId: Int,
+        assigned: List<Person>,
+        tags: List<String>
+    ) {
+        val index = choreList.indexOfFirst { it.id == choreId }
+        if (index == -1) return
+
+        val existing = choreList[index]
+        choreList[index] = existing.copy(
+            assigned = assigned,
+            tags = normalizeTags(tags)
+        )
     }
 
     fun addChore(
@@ -75,19 +98,15 @@ class CTViewModel : ViewModel() {
         descriptionRaw: String?,
         type: ChoreType,
         tags: List<String>,
-        assigned: List<Person>
+        assigned: List<Person>,
+        dueAtMillis: Long? = null
     ): Boolean {
         val title = titleRaw.trim()
         if (title.isBlank()) return false
 
         val desc = descriptionRaw?.trim()?.takeIf { it.isNotBlank() }
 
-        // normalize tags: trim, drop blanks, de-dup (case-insensitive-ish)
-        val normalizedTags = tags
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinctBy { it.lowercase() }
-            .sorted()
+        val normalizedTags = normalizeTags(tags)
 
         choreList.add(
             Chore(
@@ -97,37 +116,60 @@ class CTViewModel : ViewModel() {
                 type = type,
                 tags = normalizedTags,
                 assigned = assigned,
+                dueAtMillis = dueAtMillis,
                 completed = false
             )
         )
         return true
     }
 
-    fun resetWeeklyChoresIfNeeded(context: Context) {
+    fun resetRecurringChoresIfNeeded(context: Context) {
 
         val prefs = context.getSharedPreferences("choretracker", Context.MODE_PRIVATE)
 
         val calendar = java.util.Calendar.getInstance()
+        val currentDayOfYear = calendar.get(java.util.Calendar.DAY_OF_YEAR)
         val currentWeek = calendar.get(java.util.Calendar.WEEK_OF_YEAR)
+        val currentMonth = calendar.get(java.util.Calendar.MONTH)
         val currentYear = calendar.get(java.util.Calendar.YEAR)
 
+        val lastDayOfYear = prefs.getInt("daily_reset_day_of_year", -1)
+        val lastDayYear = prefs.getInt("daily_reset_year", -1)
         val lastWeek = prefs.getInt("weekly_reset_week", -1)
-        val lastYear = prefs.getInt("weekly_reset_year", -1)
+        val lastWeekYear = prefs.getInt("weekly_reset_year", -1)
+        val lastMonth = prefs.getInt("monthly_reset_month", -1)
+        val lastMonthYear = prefs.getInt("monthly_reset_year", -1)
 
-        // If the stored week/year differs from the current one, perform reset
-        if (currentWeek != lastWeek || currentYear != lastYear) {
+        val shouldResetDaily =
+            currentDayOfYear != lastDayOfYear || currentYear != lastDayYear
+        val shouldResetWeekly =
+            currentWeek != lastWeek || currentYear != lastWeekYear
+        val shouldResetMonthly =
+            currentMonth != lastMonth || currentYear != lastMonthYear
+
+        // If any recurring period changed, reset those chores to open.
+        if (shouldResetDaily || shouldResetWeekly || shouldResetMonthly) {
 
             for (i in choreList.indices) {
                 val c = choreList[i]
 
-                if (c.type == ChoreType.WEEKLY) {
+                val shouldResetThisChore =
+                    (c.type == ChoreType.DAILY && shouldResetDaily) ||
+                    (c.type == ChoreType.WEEKLY && shouldResetWeekly) ||
+                    (c.type == ChoreType.MONTHLY && shouldResetMonthly)
+
+                if (shouldResetThisChore) {
                     choreList[i] = c.copy(completed = false)
                 }
             }
 
             prefs.edit()
+                .putInt("daily_reset_day_of_year", currentDayOfYear)
+                .putInt("daily_reset_year", currentYear)
                 .putInt("weekly_reset_week", currentWeek)
                 .putInt("weekly_reset_year", currentYear)
+                .putInt("monthly_reset_month", currentMonth)
+                .putInt("monthly_reset_year", currentYear)
                 .apply()
         }
     }
@@ -161,6 +203,14 @@ class CTViewModel : ViewModel() {
             choreList.addAll(gson.fromJson(choresJson, type))
         }
 
+        // Migration safety: old saved chores may have completed=true but completionCount=0.
+        for (i in choreList.indices) {
+            val chore = choreList[i]
+            if (chore.completed && chore.completionCount == 0) {
+                choreList[i] = chore.copy(completionCount = 1)
+            }
+        }
+
         nextPersonId =
             if (personList.isEmpty()) 0
             else personList.maxOf { it.id } + 1
@@ -169,6 +219,14 @@ class CTViewModel : ViewModel() {
             if (choreList.isEmpty()) 1
             else choreList.maxOf { it.id } + 1
 
-        resetWeeklyChoresIfNeeded(context)
+        resetRecurringChoresIfNeeded(context)
+    }
+
+    private fun normalizeTags(tags: List<String>): List<String> {
+        return tags
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .sorted()
     }
 }

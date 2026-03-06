@@ -14,6 +14,7 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -101,7 +102,8 @@ fun ChoreTrackerBottomBar (
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChoreTrackerAppbar(
-    text: String
+    text: String,
+    model: CTViewModel? = null
 ) {
     CenterAlignedTopAppBar(
         title = {
@@ -110,6 +112,19 @@ fun ChoreTrackerAppbar(
                 style = MaterialTheme.typography.displayMedium,
                 textAlign = TextAlign.Center
             )
+        },
+        actions = {
+            val shouldShowSettings = model != null && model.screen != AppDestinations.SETTINGS
+            if (shouldShowSettings) {
+                IconButton(
+                    onClick = { model?.screen = AppDestinations.SETTINGS }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.outline_settings_24),
+                        contentDescription = "Settings"
+                    )
+                }
+            }
         },
         colors = TopAppBarColors(
             containerColor = MaterialTheme.colorScheme.primary,
