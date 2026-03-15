@@ -28,10 +28,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         ReminderScheduler.schedule(this)
         enableEdgeToEdge()
         setContent {
@@ -46,7 +49,9 @@ class MainActivity : ComponentActivity() {
 @PreviewScreenSizes
 @Composable
 fun ChoreTrackerApp(
-    model: CTViewModel = viewModel<CTViewModel>()
+    model: CTViewModel = viewModel<CTViewModel>(
+        factory = CTViewModel.Factory
+    )
 ) {
     val context = LocalContext.current
     RequestNotificationPermissionIfNeeded()

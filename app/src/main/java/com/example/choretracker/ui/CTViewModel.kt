@@ -1,5 +1,6 @@
 package com.example.choretracker.ui
 
+import QuoteUiState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -10,11 +11,29 @@ import com.example.choretracker.Chore
 import com.example.choretracker.ChoreType
 import com.example.choretracker.Person
 import android.content.Context
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.choretracker.MainActivity
+import com.example.choretracker.MainApplication
+import com.example.choretracker.QuoteRepository
+import com.example.choretracker.QuoteService
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
-class CTViewModel : ViewModel() {
+class CTViewModel(
+    private val quoteRepository: QuoteRepository
+) : ViewModel() {
 
+    var quoteState: QuoteUiState
+            by mutableStateOf(QuoteUiState.Loading)
+        private set
     var screen by mutableStateOf(AppDestinations.HOME)
 
     val choreList = mutableStateListOf<Chore>()
@@ -25,6 +44,18 @@ class CTViewModel : ViewModel() {
 
     private val gson = Gson()
 
+    companion object {
+
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+
+                val application =
+                    this[APPLICATION_KEY] as MainApplication
+
+                CTViewModel(application.quoteRepository)
+            }
+        }
+    }
     fun addPerson(nameRaw: String, emoji: String = "🙂"): Boolean {
         val name = nameRaw.trim()
         if (
@@ -40,6 +71,24 @@ class CTViewModel : ViewModel() {
             )
         )
         return true
+    }
+
+    fun fetchQuote() {
+        viewModelScope.launch(Dispatchers.IO) {
+
+            quoteState = try {
+
+                val quote = quoteRepository.getRandomQuote()
+
+                if (quote != null)
+                    QuoteUiState.Success(quote)
+                else
+                    QuoteUiState.Error("No quote returned")
+
+            } catch (e: Exception) {
+                QuoteUiState.Error(e.toString())
+            }
+        }
     }
 
     fun removePerson(person: Person) {

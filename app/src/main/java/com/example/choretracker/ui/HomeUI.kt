@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
@@ -49,6 +50,10 @@ fun HomeScreen(
     var showRemovePersonDialog by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        model.fetchQuote()
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -129,6 +134,14 @@ fun HomeCards(
     ) {
         item {
             AssignedChoresCard(
+                model = model,
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+        }
+
+        item {
+            QuotesCard(
                 model = model,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -369,6 +382,48 @@ fun AssignedChoresCard(
                 text = "Monthly: $monthlyOpen",
                 style = MaterialTheme.typography.bodyLarge
             )
+        }
+    }
+}
+
+@Composable
+fun QuotesCard(
+    model: CTViewModel,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Inspirational Quote",
+                style = MaterialTheme.typography.titleLarge
+            )
+            when (val state = model.quoteState) {
+
+                is QuoteUiState.Loading ->
+                    Text(
+                        text = "Loading quote...",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+
+                is QuoteUiState.Success ->
+                    Text(
+                        text = "\"${state.quote.q}\" - ${state.quote.a}",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+
+                is QuoteUiState.Error ->
+                    Text(
+                        text = "Error: ${state.message}",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+            }
         }
     }
 }
