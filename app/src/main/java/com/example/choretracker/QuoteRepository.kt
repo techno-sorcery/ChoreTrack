@@ -2,11 +2,6 @@ package com.example.choretracker
 
 import android.content.Context
 import com.google.gson.Gson
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import androidx.core.content.edit
 
 class QuoteRepository(
@@ -17,7 +12,6 @@ class QuoteRepository(
         context.getSharedPreferences("quote_cache", Context.MODE_PRIVATE)
 
     private val gson = Gson()
-    private val mutex = Mutex()
 
     companion object {
         private const val RANDOM_QUOTE_KEY = "random_quote"
@@ -25,7 +19,7 @@ class QuoteRepository(
         private const val RATE_LIMIT_WINDOW_MS = 30_000L
     }
 
-    suspend fun getRandomQuote(): Quote? = mutex.withLock {
+    suspend fun getRandomQuote(): Quote? {
         val now = System.currentTimeMillis()
 
         val cachedQuote = readQuote()
