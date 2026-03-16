@@ -10,7 +10,7 @@ Users can also set due dates for chores and filter chores by tag to quickly find
 ## Figma Design
 Initial UI layouts were planned using **Figma** before implementing the screens in Jetpack Compose.
 
-Link:
+Link: https://www.figma.com/community/file/1615253557640863313/chore-app-figma-design
 
 ---
 
@@ -141,4 +141,4 @@ Additional functionality implemented beyond the core assignment requirements inc
 ### 1. Clone the repository
 
 ```bash
-git clone <https://github.com/techno-sorcery/ChoreTrack.git>
+git clone https://github.com/techno-sorcery/ChoreTrack.git
