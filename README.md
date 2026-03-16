@@ -141,4 +141,4 @@ Additional functionality implemented beyond the core assignment requirements inc
 ### 1. Clone the repository
 
 ```bash
-git clone <repo-url>
+git clone <https://github.com/techno-sorcery/ChoreTrack.git>
