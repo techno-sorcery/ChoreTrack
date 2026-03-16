@@ -5,7 +5,4 @@ interface QuoteService {
 
   @GET("random")
   suspend fun getRandomQuote(): List<Quote>
-
-  @GET("today")
-  suspend fun getTodayQuote(): List<Quote>
 }
