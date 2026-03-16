@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,13 +64,14 @@ fun ChoreScreen(
 ) {
     var showAddChoreDialog by rememberSaveable { mutableStateOf(false) }
     var choreForAssignment by remember { mutableStateOf<Chore?>(null) }
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
 
     var tagExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedTag by rememberSaveable { mutableStateOf("All") }
 
-    // Build dropdown options: "All" + unique tags from chores
+    // build dropdown options: "All" + unique tags from chores
     val allTags = model.choreList
+        .asSequence()
         .flatMap { it.tags }
         .map { it.trim() }
         .filter { it.isNotBlank() }
@@ -119,7 +121,7 @@ fun ChoreScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Dropdown at top
+            // dropdown at top
             ExposedDropdownMenuBox(
                 expanded = tagExpanded,
                 onExpandedChange = { tagExpanded = !tagExpanded },
@@ -190,7 +192,9 @@ fun ChoreScreen(
     if (showAddChoreDialog) {
         AddChoreDialog(
             people = model.personList,
-            onDismiss = { showAddChoreDialog = false },
+            onDismiss = {
+                showAddChoreDialog = false
+            } ,
             onConfirm = { title, description, type, assigned, tags, dueAtMillis ->
                 model.addChore(
                     title,
@@ -399,7 +403,7 @@ fun AddChoreDialog(
     var showDueDatePicker by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    // Track selected household members (by index to keep it saveable)
+    // track selected household members (by index to keep it saveable)
     val selectedIndexes = rememberSaveable { mutableStateListOf<Int>() }
 
     fun dismissDialog() {
@@ -502,7 +506,8 @@ fun AddChoreDialog(
                     }
                 }
 
-                // --- Assignees section ---
+                // assignees part of everything
+                // fixes so that editable regardless of task status / assignments
                 Text(
                     text = "Assign to",
                     style = MaterialTheme.typography.titleMedium
@@ -557,6 +562,7 @@ fun AddChoreDialog(
                             .split(",")
                             .map { it.trim() }
                             .filter { it.isNotBlank() }
+                            .distinct()
 
                         focusManager.clearFocus(force = true)
                         keyboardController?.hide()
@@ -819,7 +825,7 @@ fun ChoreItemCard(
                         )
                     }
 
-                    // Assigned People
+                    // saving assigned people
                     val assignedPeopleText =
                         if (chore.assigned.isEmpty())
                             "Assigned: None"

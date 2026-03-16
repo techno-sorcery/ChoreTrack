@@ -16,16 +16,13 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.choretracker.MainActivity
 import com.example.choretracker.MainApplication
 import com.example.choretracker.QuoteRepository
-import com.example.choretracker.QuoteService
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import androidx.core.content.edit
 
 class CTViewModel(
     private val quoteRepository: QuoteRepository
@@ -196,7 +193,7 @@ class CTViewModel(
         val shouldResetMonthly =
             currentMonth != lastMonth || currentYear != lastMonthYear
 
-        // If any recurring period changed, reset those chores to open.
+        // if any recurring period changed, reset those chores to open.
         if (shouldResetDaily || shouldResetWeekly || shouldResetMonthly) {
 
             for (i in choreList.indices) {
@@ -212,14 +209,14 @@ class CTViewModel(
                 }
             }
 
-            prefs.edit()
-                .putInt("daily_reset_day_of_year", currentDayOfYear)
-                .putInt("daily_reset_year", currentYear)
-                .putInt("weekly_reset_week", currentWeek)
-                .putInt("weekly_reset_year", currentYear)
-                .putInt("monthly_reset_month", currentMonth)
-                .putInt("monthly_reset_year", currentYear)
-                .apply()
+            prefs.edit {
+                putInt("daily_reset_day_of_year", currentDayOfYear)
+                    .putInt("daily_reset_year", currentYear)
+                    .putInt("weekly_reset_week", currentWeek)
+                    .putInt("weekly_reset_year", currentYear)
+                    .putInt("monthly_reset_month", currentMonth)
+                    .putInt("monthly_reset_year", currentYear)
+            }
         }
     }
 
@@ -227,10 +224,10 @@ class CTViewModel(
 
         val prefs = context.getSharedPreferences("choretracker", Context.MODE_PRIVATE)
 
-        prefs.edit()
-            .putString("people", gson.toJson(personList))
-            .putString("chores", gson.toJson(choreList))
-            .apply()
+        prefs.edit {
+            putString("people", gson.toJson(personList))
+                .putString("chores", gson.toJson(choreList))
+        }
     }
 
     fun loadData(context: Context) {
@@ -252,7 +249,7 @@ class CTViewModel(
             choreList.addAll(gson.fromJson(choresJson, type))
         }
 
-        // Migration safety: old saved chores may have completed=true but completionCount=0.
+        // migration safety: old saved chores may have completed=true but completionCount=0.
         for (i in choreList.indices) {
             val chore = choreList[i]
             if (chore.completed && chore.completionCount == 0) {

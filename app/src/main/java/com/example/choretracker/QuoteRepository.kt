@@ -7,6 +7,7 @@ import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.content.edit
 
 class QuoteRepository(
     private val context: Context,
@@ -71,10 +72,10 @@ class QuoteRepository(
         return try {
             val freshQuote = service.getTodayQuote().firstOrNull()
             if (freshQuote != null) {
-                prefs.edit()
-                    .putString(TODAY_QUOTE_KEY, gson.toJson(freshQuote))
-                    .putString(TODAY_QUOTE_DATE_KEY, today)
-                    .apply()
+                prefs.edit {
+                    putString(TODAY_QUOTE_KEY, gson.toJson(freshQuote))
+                        .putString(TODAY_QUOTE_DATE_KEY, today)
+                }
                 freshQuote
             } else {
                 cachedQuote
@@ -99,10 +100,10 @@ class QuoteRepository(
         timeKey: String,
         timeValue: Long
     ) {
-        prefs.edit()
-            .putString(quoteKey, gson.toJson(quote))
-            .putLong(timeKey, timeValue)
-            .apply()
+        prefs.edit {
+            putString(quoteKey, gson.toJson(quote))
+                .putLong(timeKey, timeValue)
+        }
     }
 
     private fun todayString(): String {

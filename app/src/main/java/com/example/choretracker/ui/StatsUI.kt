@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.choretracker.Person
 
 @Composable
 fun StatsScreen(
@@ -57,7 +56,7 @@ fun StatsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // Household stats card
+            // household stats card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth()

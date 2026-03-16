@@ -1,10 +1,12 @@
 package com.example.choretracker.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,6 +40,7 @@ import androidx.core.content.ContextCompat
 import com.example.choretracker.ReminderScheduler
 import com.example.choretracker.ReminderSettings
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -59,14 +62,10 @@ fun SettingsScreen(
     )
 
     val notificationsGranted =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -161,9 +160,7 @@ fun SettingsScreen(
                             )
                             TextButton(
                                 onClick = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                 }
                             ) {
                                 Text("Grant permission")
@@ -198,6 +195,7 @@ fun SettingsScreen(
     }
 }
 
+@SuppressLint("DefaultLocale")
 private fun formatReminderHour(hour24: Int): String {
     val clamped = hour24.coerceIn(0, 23)
     val amPm = if (clamped < 12) "AM" else "PM"
